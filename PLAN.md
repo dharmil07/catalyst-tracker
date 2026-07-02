@@ -19,7 +19,7 @@ explanations for the one interactive step that can't be automated (`gh auth logi
 |---|---|
 | Data refresh | **Manual upload, automation-ready.** Drop new CSVs, run one command. No live scraper (BSE/NSE block automation; would be fragile). Pipeline structured so a scheduled scraper can be added later. |
 | Scope | **Multi-category from the start**, category-agnostic core. |
-| Categories | **Insider Trading** (full) + **Corporate Actions** (full, from BSE calendar file) + **Open Offers** & **Preferential Issues** (scaffolded now, wired when user supplies exports). |
+| Categories | **Insider Trading** (full) + **Corporate Actions** (full, from BSE calendar file) + **Preferential Issues** (full, fetched from NSE's JSON API by `pipeline/fetch_nse_pref.py`) + **Open Offers** (scaffolded, wired when user supplies exports). |
 | Cross-exchange | **BSE = primary, NSE = secondary.** Verified: 1,103/1,592 (69%) NSE rows match a BSE row on normalized (company, person, from-date, shares); 96.5% of those agree on value. |
 | Audience | Personal tool, **public** static site is fine. |
 | Hosting | **GitHub Pages** (free, deploy from branch, `/docs` folder). |
@@ -126,5 +126,6 @@ top movers.
 
 ## Open items needing user input later
 
-- Open Offers + Preferential Issues exports (filenames once dropped in `data/raw/...`).
+- Open Offers exports (filenames once dropped in `data/raw/open_offers/`).
+  (Preferential Issues no longer need exports — fetched from the NSE API.)
 - A second/third month of data to confirm BSE-primary + matching assumptions hold over time.
