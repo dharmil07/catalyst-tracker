@@ -48,9 +48,14 @@ def col(rec: dict[str, str], *needles: str) -> str:
     return ""
 
 
-def find_csvs(folder: str | Path) -> list[Path]:
-    """Return all .csv files under a folder (sorted), or [] if it doesn't exist."""
+def find_files(folder: str | Path, pattern: str) -> list[Path]:
+    """Return all files matching a glob under a folder (sorted), or []."""
     folder = Path(folder)
     if not folder.exists():
         return []
-    return sorted(p for p in folder.rglob("*.csv") if p.is_file())
+    return sorted(p for p in folder.rglob(pattern) if p.is_file())
+
+
+def find_csvs(folder: str | Path) -> list[Path]:
+    """Return all .csv files under a folder (sorted), or [] if it doesn't exist."""
+    return find_files(folder, "*.csv")

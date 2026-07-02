@@ -2,6 +2,7 @@
 import { loadAll, state } from "./data.js";
 import { initInsider, showInsider, hideInsider } from "./insider.js";
 import { showCorp, hideCorp } from "./corpactions.js";
+import { showPref, hidePref } from "./preferential.js";
 import { parseHash } from "./hash.js";
 import { initTheme } from "./theme.js";
 import { $, el, fmtInt, fmtDate, label } from "./util.js";
@@ -23,7 +24,6 @@ async function boot() {
   renderFreshness();
   renderTrust();
   renderScaffold("openoffers", state.openoffers, "Open Offers");
-  renderScaffold("preferential", state.preferential, "Preferential Issues");
   $("#genstamp").textContent = state.meta ? "data generated " + state.meta.generated_at.replace("T", " ") : "";
 
   const { tab, params } = parseHash();
@@ -46,18 +46,21 @@ function switchTab(tab, params) {
   currentTab = tab;
   for (const b of document.querySelectorAll(".tab")) b.classList.toggle("active", b.dataset.tab === tab);
   for (const s of document.querySelectorAll(".tabpanel")) s.classList.toggle("active", s.id === "tab-" + tab);
-  hideInsider(); hideCorp();
+  hideInsider(); hideCorp(); hidePref();
   if (tab === "insider") showInsider();
   else if (tab === "corpactions") showCorp(params);
+  else if (tab === "preferential") showPref(params);
 }
 
 function renderFreshness() {
   const m = state.meta; if (!m) return;
   const ib = m.sources.insider_bse, inn = m.sources.insider_nse, ca = m.sources.corporate_actions_bse;
+  const pf = m.sources.preferential_nse;
   $("#freshness").innerHTML =
     `Insider BSE → <b>${fmtDate(ib.transaction_dates?.max)}</b> · ` +
     `NSE filed → <b>${fmtDate(inn.latest_intimation)}</b><br>` +
-    `Corp actions → <b>${fmtDate(ca.event_dates?.min)} – ${fmtDate(ca.event_dates?.max)}</b>`;
+    `Corp actions → <b>${fmtDate(ca.event_dates?.min)} – ${fmtDate(ca.event_dates?.max)}</b>` +
+    (pf ? ` · Pref issues → <b>${fmtDate(pf.allotment_dates?.max)}</b>` : "");
 }
 
 function renderTrust() {
@@ -96,6 +99,17 @@ function renderTrust() {
       ["Corp-action events", fmtInt(m.corporate_actions.records)],
     ]),
   );
+  const p = m.preferential;
+  if (p && p.records) {
+    const ps = p.amount_status || {};
+    $("#trustBody").append(card("Preferential issues (NSE API)", [
+      ["Filings", fmtInt(p.records)],
+      ["Amounts cross-checked OK", fmtInt(ps.ok || 0)],
+      ["Repaired (lakh-units error)", fmtInt(ps.repaired || 0)],
+      ["Partly-paid (warrants)", fmtInt(ps.partial || 0)],
+      ["No usable amount", fmtInt((ps.novalue || 0) + (ps.unverified || 0))],
+    ]));
+  }
   if (m.warnings && Object.keys(m.warnings).length) {
     $("#trustBody").append(card("⚠ Warnings", Object.entries(m.warnings).map(([k, v]) => [k, Array.isArray(v) ? v.join(", ") : v])));
   }

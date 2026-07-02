@@ -17,11 +17,12 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from pipeline import match, normalize as nz, sanitize  # noqa: E402
-from pipeline.parsers import bse_corpactions, bse_insider, nse_insider  # noqa: E402
+from pipeline.parsers import bse_corpactions, bse_insider, nse_insider, nse_pref  # noqa: E402
 
 BSE_CSV = ROOT / "data/raw/insider/bse/BSE_SEBI_PIT170626.csv"
 NSE_CSV = ROOT / "data/raw/insider/nse/NSE_CF-Insider-Trading-17-03-2026-to-17-06-2026.csv"
 CORP_CSV = ROOT / "data/raw/corporate_actions/bse/BSE_All_Corporate_Actions.csv"
+PREF_JSON = ROOT / "data/raw/preferential/nse/NSE_PREF_01-01-2026_to_02-07-2026.json"
 
 
 # --------------------------------------------------------------------------- #
@@ -183,6 +184,41 @@ def test_zero_value_buys_are_novalue():
 
 
 # --------------------------------------------------------------------------- #
+# preferential issues (NSE API payload)
+# --------------------------------------------------------------------------- #
+
+def test_pref_parser_counts_and_fields():
+    recs = list(nse_pref.parse(PREF_JSON))
+    assert len(recs) == 349
+    assert len({r["app_id"] for r in recs}) == 349  # appId is a unique key
+    assert all(r["company_norm"] for r in recs)
+    assert all(r["xbrl"].startswith("http") for r in recs if r["xbrl"])
+    from collections import Counter
+    status = Counter(r["amount_status"] for r in recs)
+    assert status == {"ok": 288, "repaired": 32, "partial": 23, "novalue": 6}
+
+
+def test_pref_lakh_unit_amounts_repaired():
+    recs = list(nse_pref.parse(PREF_JSON))
+    # UGRO Capital's filed amountRaised is 10^5x its shares x offer price —
+    # a lakh-units entry error that must be repaired to the product.
+    ugro = [r for r in recs if r["company_norm"].startswith("UGRO")
+            and r["amount_status"] == "repaired"]
+    assert ugro
+    for r in ugro:
+        assert r["amount_raised"] == r["issue_size"] == r["shares_allotted"] * r["offer_price"]
+        assert r["issue_size"] < 1e11  # sane (< Rs 10,000 cr), not the quadrillions filed
+
+
+def test_pref_partly_paid_amounts_kept():
+    recs = list(nse_pref.parse(PREF_JSON))
+    partial = [r for r in recs if r["amount_status"] == "partial"]
+    assert partial
+    # Warrants collect 10-50% upfront; the paid-in amount stays below issue size.
+    assert all(r["amount_raised"] < r["issue_size"] for r in partial)
+
+
+# --------------------------------------------------------------------------- #
 # full pipeline
 # --------------------------------------------------------------------------- #
 
@@ -195,7 +231,10 @@ def test_full_ingest_shape():
     assert ins["value_status"]["flagged"] == 104
     assert ins["value_status"]["derivative"] == 33
     assert meta["corporate_actions"]["records"] == 675
+    assert meta["preferential"]["records"] == 349
+    assert meta["preferential"]["amount_status"]["repaired"] == 32
     assert not meta["warnings"], meta["warnings"]
     # generated JSON exists
     assert (ROOT / "docs/data/insider.json").exists()
+    assert (ROOT / "docs/data/preferential.json").exists()
     assert (ROOT / "docs/data/meta.json").exists()

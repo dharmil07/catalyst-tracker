@@ -13,8 +13,8 @@ import sys
 from pathlib import Path
 
 from . import aggregate, match, normalize as nz, sanitize
-from .parsers import bse_corpactions, bse_insider, nse_insider
-from .util import find_csvs
+from .parsers import bse_corpactions, bse_insider, nse_insider, nse_pref
+from .util import find_csvs, find_files
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
@@ -34,7 +34,9 @@ def run() -> dict:
     bse = _parse_all(RAW / "insider" / "bse", bse_insider.parse)
     nse = _parse_all(RAW / "insider" / "nse", nse_insider.parse)
     corp = _parse_all(RAW / "corporate_actions" / "bse", bse_corpactions.parse)
-    raw_counts = {"bse": len(bse), "nse": len(nse), "corp": len(corp)}
+    pref, pref_raw = _load_preferential()
+    raw_counts = {"bse": len(bse), "nse": len(nse), "corp": len(corp),
+                  "pref": pref_raw}
 
     # Sanitize values across the combined pool so twin-repair can borrow a sane
     # value from either feed before any rows are collapsed.
@@ -48,7 +50,7 @@ def run() -> dict:
         rec["id"] = i
 
     meta = aggregate.build_meta(
-        insider=insider, corp=corp, raw_counts=raw_counts,
+        insider=insider, corp=corp, pref=pref, raw_counts=raw_counts,
         dedup={"bse": bse_dedup, "nse": nse_dedup}, merge=merge_stats,
         value_stats=value_stats, unmapped=nz.unmapped(),
     )
@@ -56,17 +58,33 @@ def run() -> dict:
     OUT.mkdir(parents=True, exist_ok=True)
     _write(OUT / "insider.json", insider)
     _write(OUT / "corporate_actions.json", corp)
-    # Scaffolded categories — empty until the user supplies exports.
-    _write(OUT / "open_offers.json", _load_or_empty("open_offers"))
-    _write(OUT / "preferential.json", _load_or_empty("preferential"))
+    _write(OUT / "preferential.json", pref)
+    # Scaffolded category — empty until the user supplies exports.
+    _write(OUT / "open_offers.json", [])
     _write(OUT / "meta.json", meta)
 
     return meta
 
 
-def _load_or_empty(name: str) -> list:
-    """Placeholder for not-yet-sourced categories (returns [])."""
-    return []
+def _load_preferential() -> tuple[list[dict], int]:
+    """Parse all fetched NSE PREF payloads, dedupe on appId across files.
+
+    Overlapping fetch windows produce identical filings in multiple files; the
+    last-parsed copy wins (files sort by name, so the newest window prevails
+    for any filing whose stage advanced between fetches).
+    """
+    by_id: dict[str, dict] = {}
+    raw = 0
+    for path in find_files(RAW / "preferential" / "nse", "*.json"):
+        for rec in nse_pref.parse(path):
+            raw += 1
+            by_id[rec["app_id"] or f"noid-{raw}"] = rec
+    records = sorted(by_id.values(),
+                     key=lambda r: (r["date_allotment"] or "", r["company"]),
+                     reverse=True)
+    for i, rec in enumerate(records):
+        rec["id"] = i
+    return records, raw
 
 
 def _write(path: Path, data) -> None:
@@ -84,6 +102,10 @@ def _print_summary(meta: dict) -> None:
     print(f"  Insider date range:   {ins['transaction_dates']}")
     ca = meta["corporate_actions"]
     print(f"  Corp actions:         {ca['records']}  {ca['buckets']}")
+    pf = meta["preferential"]
+    print(f"  Preferential issues:  {pf['records']}  "
+          f"(₹{pf['issue_size_total'] / 1e7:,.0f} cr, "
+          f"amounts {pf['amount_status']})")
     if meta["warnings"]:
         print(f"  WARNINGS:             {meta['warnings']}")
 

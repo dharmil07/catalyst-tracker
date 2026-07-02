@@ -10,7 +10,7 @@ def _date_span(values) -> dict:
     return {"min": dates[0] if dates else None, "max": dates[-1] if dates else None}
 
 
-def build_meta(*, insider, corp, raw_counts, dedup, merge, value_stats, unmapped) -> dict:
+def build_meta(*, insider, corp, pref, raw_counts, dedup, merge, value_stats, unmapped) -> dict:
     """Assemble the meta.json structure from final data + pipeline stats."""
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -34,6 +34,10 @@ def build_meta(*, insider, corp, raw_counts, dedup, merge, value_stats, unmapped
                 "rows_raw": raw_counts.get("corp", 0),
                 "event_dates": _date_span(r["ex_date"] for r in corp),
             },
+            "preferential_nse": {
+                "rows_raw": raw_counts.get("pref", 0),
+                "allotment_dates": _date_span(r["date_allotment"] for r in pref),
+            },
         },
         "insider": {
             "records": len(insider),
@@ -50,6 +54,14 @@ def build_meta(*, insider, corp, raw_counts, dedup, merge, value_stats, unmapped
             "records": len(corp),
             "buckets": dict(Counter(r["category"] for r in corp)),
             "event_dates": _date_span(r["ex_date"] for r in corp),
+        },
+        "preferential": {
+            "records": len(pref),
+            "companies": len({r["company_norm"] for r in pref}),
+            "issue_size_total": sum(r["issue_size"] or 0 for r in pref),
+            "amount_status": dict(Counter(r["amount_status"] for r in pref)),
+            "allotment_dates": _date_span(r["date_allotment"] for r in pref),
+            "listing_dates": _date_span(r["date_listing"] for r in pref),
         },
         "warnings": {
             "unmapped_" + k: sorted(v) for k, v in unmapped.items() if v

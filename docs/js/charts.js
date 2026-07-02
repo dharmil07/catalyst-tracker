@@ -41,8 +41,11 @@ function render(canvasId, config) {
 const linScales = (stacked = false) => {
   const g = cssVar("--grid", gridColor);
   return {
+    // No ticks.callback here: on the category axis of horizontal (indexAxis:"y")
+    // charts an identity callback would bypass the index -> label mapping and
+    // print bare row numbers instead of company names.
     x: { stacked, grid: { color: g } },
-    y: { stacked, grid: { color: g }, ticks: { callback: (v) => v } },
+    y: { stacked, grid: { color: g } },
   };
 };
 

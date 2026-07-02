@@ -4,8 +4,17 @@
 #
 #   ./update.sh                      # auto commit message
 #   ./update.sh "Add June BSE file"  # custom commit message
+#   ./update.sh --fetch              # also pull fresh preferential-issue data
+#                                    # from the NSE API before ingesting
 set -euo pipefail
 cd "$(dirname "$0")"
+
+if [ "${1:-}" = "--fetch" ]; then
+  shift
+  echo "▶ Fetching NSE preferential issues"
+  python3 pipeline/fetch_nse_pref.py
+  echo
+fi
 
 echo "▶ Ingesting raw CSVs → docs/data/*.json"
 python3 pipeline/ingest.py

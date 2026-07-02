@@ -136,9 +136,31 @@
     </div>
   </section>
 
+  <!-- ===================== PREFERENTIAL ISSUES ===================== -->
+  <section class="tabpanel" id="tab-preferential">
+    <div class="filters">
+      <div class="filter-row">
+        <label>Allotted from <input type="date" id="pfFrom" /></label>
+        <label>To <input type="date" id="pfTo" /></label>
+        <input type="search" id="pfSearch" placeholder="Search company or symbol…" />
+        <label class="switch"><input type="checkbox" id="pfWatchOnly" /> Watchlist only</label>
+        <button id="pfReset" class="ghost">Reset</button>
+      </div>
+    </div>
+    <div class="kpis" id="pfKpis"></div>
+    <div class="charts-grid two">
+      <div class="card"><h3>Capital raised by month (₹ cr, allotment)</h3><div class="chartbox"><canvas id="chartPfMonth"></canvas></div></div>
+      <div class="card"><h3>Largest issues (₹ cr)</h3><div class="chartbox"><canvas id="chartPfTop"></canvas></div></div>
+    </div>
+    <div class="card table-card">
+      <div class="table-head"><h3>Preferential issues <span id="pfRowCount" class="muted"></span></h3>
+        <button id="pfExportCsv" class="primary">⬇ Export CSV</button></div>
+      <div class="table-scroll"><table id="pfTable"></table></div>
+    </div>
+  </section>
+
   <!-- ===================== SCAFFOLDED TABS ===================== -->
   <section class="tabpanel" id="tab-openoffers"><div class="scaffold" id="scaffold-openoffers"></div></section>
-  <section class="tabpanel" id="tab-preferential"><div class="scaffold" id="scaffold-preferential"></div></section>
 </main>
 
 <footer class="sitefoot">

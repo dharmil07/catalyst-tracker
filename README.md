@@ -24,7 +24,10 @@ with charts, signal panels, and CSV export — deployable as a static site on Gi
     each source is.
 - **Corporate Actions** — dividends, bonus, splits, rights, buybacks, mergers/demergers,
   REIT/InvIT distributions, with an ex-date/record-date calendar.
-- **Open Offers** and **Preferential Issues** — scaffolded tabs, ready to populate (see below).
+- **Preferential Issues** — allotments, offer price, issue size, and listing dates pulled
+  straight from NSE's JSON API (`pipeline/fetch_nse_pref.py`), with lakh-units filing errors
+  auto-repaired against shares × offer price.
+- **Open Offers** — scaffolded tab, ready to populate (see below).
 - Watchlist (saved in your browser), shareable deep-links, and CSV export on every table.
 
 ---
@@ -52,10 +55,15 @@ JSON and does all filtering/aggregation client-side.
    - `data/raw/corporate_actions/bse/`
 3. Run:
    ```bash
-   ./update.sh
+   ./update.sh          # add --fetch to also refresh preferential issues from the NSE API
    ```
    This re-ingests, runs the tests, commits, and (once GitHub is connected) pushes so the live
    site redeploys.
+
+Preferential issues need no manual export — `python3 pipeline/fetch_nse_pref.py` (or the
+`--fetch` flag above) downloads them from the NSE API into `data/raw/preferential/nse/`.
+Default window is the trailing 180 days; use `--days N` or `--from/--to DD-MM-YYYY` for more.
+Overlapping fetches are fine — filings dedupe on their NSE application id.
 
 ---
 
@@ -106,12 +114,13 @@ After this, every `./update.sh` pushes new data and the site redeploys automatic
 
 ---
 
-## Adding Open Offers / Preferential Issues
+## Adding Open Offers
 
-These tabs are scaffolded and wired to empty data. To populate one:
-1. Drop an export into `data/raw/open_offers/` or `data/raw/preferential/`.
-2. Add a parser in `pipeline/parsers/` (mirror `bse_corpactions.py`) mapping its columns to a
-   record dict, and emit it to `docs/data/<name>.json` from `pipeline/ingest.py`.
+This tab is scaffolded and wired to empty data. To populate it:
+1. Drop an export into `data/raw/open_offers/`.
+2. Add a parser in `pipeline/parsers/` (mirror `bse_corpactions.py` for a CSV, or
+   `nse_pref.py` for an NSE API payload) mapping its fields to a record dict, and emit it to
+   `docs/data/open_offers.json` from `pipeline/ingest.py`.
 3. The shared filter/table/chart framework renders it automatically.
 
 ---
