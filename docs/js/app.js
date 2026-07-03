@@ -85,7 +85,7 @@ function renderTrust() {
       ["NSE rows merged into BSE", fmtInt(i.cross_feed.merged || 0)],
       ["NSE-only rows kept", fmtInt(i.cross_feed.nse_only || 0)],
     ]),
-    card("Value quality (final rows)", [
+    card("Value quality (dashboard rows)", [
       ["Trusted", fmtInt(vs.ok || 0)],
       ["Repaired from twin", fmtInt(vs.repaired || 0)],
       ["Flagged & excluded", fmtInt(vs.flagged || 0)],
@@ -94,10 +94,13 @@ function renderTrust() {
     ]),
     card("Coverage", [
       ["Insider date range", `${fmtDate(i.transaction_dates?.min)} – ${fmtDate(i.transaction_dates?.max)}`],
+      i.served && i.served.window_months
+        ? ["Dashboard window", `last ${i.served.window_months} months · ${fmtInt(i.served.records)} of ${fmtInt(i.records)} filings`]
+        : null,
       ["BSE latest intimation", fmtDate(m.sources.insider_bse.latest_intimation)],
       ["NSE latest intimation", fmtDate(m.sources.insider_nse.latest_intimation)],
       ["Corp-action events", fmtInt(m.corporate_actions.records)],
-    ]),
+    ].filter(Boolean)),
   );
   const p = m.preferential;
   if (p && p.records) {

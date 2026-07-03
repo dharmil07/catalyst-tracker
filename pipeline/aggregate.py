@@ -10,7 +10,8 @@ def _date_span(values) -> dict:
     return {"min": dates[0] if dates else None, "max": dates[-1] if dates else None}
 
 
-def build_meta(*, insider, corp, pref, raw_counts, dedup, merge, value_stats, unmapped) -> dict:
+def build_meta(*, insider, served, corp, pref, raw_counts, dedup, merge,
+               value_stats, unmapped) -> dict:
     """Assemble the meta.json structure from final data + pipeline stats."""
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
@@ -45,10 +46,16 @@ def build_meta(*, insider, corp, pref, raw_counts, dedup, merge, value_stats, un
             "within_bse": dedup.get("bse", {}),
             "within_nse": dedup.get("nse", {}),
             "cross_feed": merge,
-            # Reported on the FINAL (deduped) records — what the dashboard shows.
-            "value_status": dict(Counter(r["value_status"] for r in insider)),
+            # Reported on the SERVED records — what the dashboard shows.
+            # (ingest adds window_months/cutoff to "served" after this.)
+            "served": {
+                "records": len(served),
+                "by_source": dict(Counter(r["source"] for r in served)),
+            },
+            "value_status": dict(Counter(r["value_status"] for r in served)),
             "value_status_raw": value_stats,
-            "transaction_dates": _date_span(r["date_from"] for r in insider),
+            "transaction_dates": _date_span(r["date_from"] for r in served),
+            "full_transaction_dates": _date_span(r["date_from"] for r in insider),
         },
         "corporate_actions": {
             "records": len(corp),

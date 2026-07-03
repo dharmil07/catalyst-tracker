@@ -12,11 +12,31 @@ import json
 import sys
 from pathlib import Path
 
-from . import aggregate, match, normalize as nz, sanitize
-from .parsers import bse_corpactions, bse_insider, nse_insider, nse_pref
-from .util import find_csvs, find_files
-
 ROOT = Path(__file__).resolve().parent.parent
+# Absolute imports (with ROOT on sys.path) so this works both as a module
+# (python3 -m pipeline.ingest, or imported by the tests) and as a plain
+# script (python3 pipeline/ingest.py, as update.sh runs it).
+sys.path.insert(0, str(ROOT))
+
+# The dashboard serves only the most recent transactions. Full-history BSE
+# exports run to 170k+ rows (back to 2001) — as JSON that is >100 MB, which a
+# browser can't reasonably load and GitHub refuses to store. The raw CSVs keep
+# the full history; widen this window and re-run if you want more served.
+SERVE_MONTHS = 18
+
+# Fields the site actually reads (see docs/js/*). Raw-echo and pipeline-debug
+# fields stay out of the served JSON to keep the download small.
+SERVE_FIELDS = (
+    "id", "source", "security_code", "symbol", "company", "company_norm",
+    "person", "person_norm", "category", "txn_type", "mode", "is_market",
+    "is_promoter", "shares", "value", "value_status", "value_in_totals",
+    "post_pct", "date_from", "regulation", "xbrl",
+)
+
+from pipeline import aggregate, match, normalize as nz, sanitize  # noqa: E402
+from pipeline.parsers import (bse_corpactions, bse_insider, nse_insider,  # noqa: E402
+                              nse_pref)
+from pipeline.util import find_csvs, find_files  # noqa: E402
 RAW = ROOT / "data" / "raw"
 OUT = ROOT / "docs" / "data"
 
@@ -49,14 +69,18 @@ def run() -> dict:
     for i, rec in enumerate(insider):
         rec["id"] = i
 
+    served, cutoff = _serve_window(insider)
+
     meta = aggregate.build_meta(
-        insider=insider, corp=corp, pref=pref, raw_counts=raw_counts,
+        insider=insider, served=served, corp=corp, pref=pref,
+        raw_counts=raw_counts,
         dedup={"bse": bse_dedup, "nse": nse_dedup}, merge=merge_stats,
         value_stats=value_stats, unmapped=nz.unmapped(),
     )
+    meta["insider"]["served"].update(window_months=SERVE_MONTHS, cutoff=cutoff)
 
     OUT.mkdir(parents=True, exist_ok=True)
-    _write(OUT / "insider.json", insider)
+    _write(OUT / "insider.json", served)
     _write(OUT / "corporate_actions.json", corp)
     _write(OUT / "preferential.json", pref)
     # Scaffolded category — empty until the user supplies exports.
@@ -64,6 +88,25 @@ def run() -> dict:
     _write(OUT / "meta.json", meta)
 
     return meta
+
+
+def _serve_window(insider: list[dict]) -> tuple[list[dict], str | None]:
+    """Slim the final records to the SERVE_MONTHS most recent transactions.
+
+    Anchored on the newest transaction date in the data (not the clock), so a
+    stale dataset still serves a full window instead of shrinking to nothing.
+    """
+    dates = sorted(r["date_from"] for r in insider if r["date_from"])
+    if not dates:
+        return [{k: r.get(k) for k in SERVE_FIELDS} for r in insider], None
+    y, m, d = map(int, dates[-1].split("-"))
+    m -= SERVE_MONTHS
+    while m <= 0:
+        m += 12
+        y -= 1
+    cutoff = f"{y:04d}-{m:02d}-{d:02d}"
+    return [{k: r.get(k) for k in SERVE_FIELDS}
+            for r in insider if r["date_from"] and r["date_from"] >= cutoff], cutoff
 
 
 def _load_preferential() -> tuple[list[dict], int]:
@@ -96,6 +139,9 @@ def _print_summary(meta: dict) -> None:
     ins = meta["insider"]
     print("Catalyst Tracker ingest complete")
     print(f"  Insider records:      {ins['records']}  {ins['by_source']}")
+    print(f"  Served to dashboard:  {ins['served']['records']} "
+          f"(last {ins['served']['window_months']} months, "
+          f"since {ins['served']['cutoff']})")
     print(f"  Within-BSE collapsed: {ins['within_bse']}")
     print(f"  Cross-feed:           {ins['cross_feed']}")
     print(f"  Value status:         {ins['value_status']}")

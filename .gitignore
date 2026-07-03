@@ -21,3 +21,6 @@ Thumbs.db
 # Note: data/raw/*.csv and docs/data/*.json ARE committed on purpose —
 # the raw exports are the canonical inputs and the generated JSON is what
 # GitHub Pages serves. Do not ignore them.
+
+# Parked data files not consumed by the pipeline (e.g. unsupported formats)
+data/unused/

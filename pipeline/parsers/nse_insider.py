@@ -13,8 +13,26 @@ from .. import normalize as nz
 from ..util import col, read_csv_dicts
 
 
+def _reject_annual_format(rec: dict, path: Path) -> None:
+    """Fail loudly on NSE's "Annual PIT" export, which looks similar but is a
+    coarser, incompatible dataset: no XBRL links, no acquisition mode, and it
+    merges sales with pledge invocations (and pledge creations with releases),
+    so parsing it here would silently corrupt the dashboard's signals."""
+    if any("ACQUIRED / DISPOSED - BUY" in k.upper() for k in rec):
+        raise ValueError(
+            f"{path.name} is NSE's 'Annual PIT' export, which this pipeline does "
+            "not support. Download the regular Insider Trading export instead "
+            "(https://www.nseindia.com/companies-listing/corporate-filings-insider-trading, "
+            "'Insider Trading' search -> Download CSV; several date-range files "
+            "can sit side by side in data/raw/insider/nse/), and remove this file."
+        )
+
+
 def parse(path: str | Path) -> Iterator[dict]:
+    path = Path(path)
     for i, r in enumerate(read_csv_dicts(path)):
+        if i == 0:
+            _reject_annual_format(r, path)
         sec_type_acq = col(r, "TYPE OF SECURITY (ACQUIRED")
         deriv_type = col(r, "DERIVATIVE TYPE")
         contract_spec = col(r, "DERIVATIVE CONTRACT SPECIFICATION")

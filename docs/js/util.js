@@ -72,9 +72,11 @@ export function downloadCsv(filename, rows) {
 export const LABELS = {
   BUY: "Buy", SELL: "Sell", PLEDGE: "Pledge", REVOKE: "Revoke", INVOKE: "Invoke", OTHER: "Other",
   PROMOTER: "Promoter", PROMOTER_GROUP: "Promoter Group", PROMOTER_DIRECTOR: "Promoter & Director",
+  PROMOTER_DESIGNATED: "Promoter & Designated",
   DIRECTOR: "Director", KMP: "KMP", DESIGNATED_EMPLOYEE: "Designated/Employee",
   IMMEDIATE_RELATIVE: "Immediate Relative", TRUST: "Trust", CONNECTED_PERSON: "Connected Person",
-  MARKET_PURCHASE: "Market Purchase", MARKET_SALE: "Market Sale", ESOP: "ESOP", OFF_MARKET: "Off Market",
+  MARKET_PURCHASE: "Market Purchase", MARKET_SALE: "Market Sale", MARKET: "Market",
+  ESOP: "ESOP", OFF_MARKET: "Off Market",
   PLEDGE_CREATION: "Pledge Creation", PLEDGE_INVOCATION: "Pledge Invocation", PLEDGE_REVOCATION: "Pledge Revocation",
   GIFT: "Gift", INTER_SE: "Inter-se Transfer", ALLOTMENT: "Allotment", PREFERENTIAL: "Preferential",
   CONVERSION: "Conversion", RIGHTS: "Rights", BUYBACK: "Buyback", BLOCK_DEAL: "Block Deal",

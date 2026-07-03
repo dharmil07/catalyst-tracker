@@ -1,11 +1,13 @@
-"""Tests for the Catalyst Tracker pipeline, run against the real sample exports in
-data/raw/ (they double as fixtures). Runnable two ways:
+"""Tests for the Catalyst Tracker pipeline. Runnable two ways:
 
     python3 tests/run_tests.py     # stdlib runner, zero dependencies
     pytest                         # if installed
 
-The hard-coded counts are tied to the committed sample files; if those files are
-replaced, update the expected numbers (they document the pipeline's behavior).
+Parser/matcher tests run against frozen copies of real exchange exports in
+tests/fixtures/ — the hard-coded counts document the pipeline's behavior on
+those exact files and never change when new data is dropped into data/raw/.
+The full-ingest test runs on whatever is in data/raw/ and asserts structural
+invariants only, so refreshing data can't break the suite.
 """
 from __future__ import annotations
 
@@ -19,10 +21,11 @@ sys.path.insert(0, str(ROOT))
 from pipeline import match, normalize as nz, sanitize  # noqa: E402
 from pipeline.parsers import bse_corpactions, bse_insider, nse_insider, nse_pref  # noqa: E402
 
-BSE_CSV = ROOT / "data/raw/insider/bse/BSE_SEBI_PIT170626.csv"
-NSE_CSV = ROOT / "data/raw/insider/nse/NSE_CF-Insider-Trading-17-03-2026-to-17-06-2026.csv"
-CORP_CSV = ROOT / "data/raw/corporate_actions/bse/BSE_All_Corporate_Actions.csv"
-PREF_JSON = ROOT / "data/raw/preferential/nse/NSE_PREF_01-01-2026_to_02-07-2026.json"
+FIX = ROOT / "tests/fixtures"
+BSE_CSV = FIX / "BSE_SEBI_PIT170626.csv"
+NSE_CSV = FIX / "NSE_CF-Insider-Trading-17-03-2026-to-17-06-2026.csv"
+CORP_CSV = FIX / "BSE_All_Corporate_Actions.csv"
+PREF_JSON = FIX / "NSE_PREF_01-01-2026_to_02-07-2026.json"
 
 
 # --------------------------------------------------------------------------- #
@@ -90,6 +93,25 @@ def test_no_unmapped_vocabulary_in_real_data():
     assert unmapped["txn_type"] == set(), unmapped["txn_type"]
     assert unmapped["category"] == set(), unmapped["category"]
     assert unmapped["mode"] == set(), unmapped["mode"]
+
+
+def test_nse_annual_pit_export_rejected(tmp_path=None):
+    # NSE's "Annual PIT" export looks like an insider file but is a coarser,
+    # incompatible format; parsing must fail loudly, not degrade silently.
+    import tempfile
+    header = ('"COMPANY NAME \n","NAME OF PERSON \n","CATEGORY OF PERSON \n",'
+              '"SECURITIES ACQUIRED / DISPOSED - BUY \nNo. of shares"\n'
+              '"Foo Ltd","A B","Promoter","100"\n')
+    with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as fh:
+        fh.write(header)
+        tmp = fh.name
+    try:
+        list(nse_insider.parse(tmp))
+        raise AssertionError("annual-format file should have been rejected")
+    except ValueError as e:
+        assert "Annual PIT" in str(e)
+    finally:
+        Path(tmp).unlink()
 
 
 def test_nse_extras_present():
@@ -223,18 +245,30 @@ def test_pref_partly_paid_amounts_kept():
 # --------------------------------------------------------------------------- #
 
 def test_full_ingest_shape():
+    """Runs on the LIVE data/raw/ contents: structural invariants only, so
+    dropping new exchange exports never breaks the suite."""
+    import json
+
     from pipeline import ingest
     meta = ingest.run()
     ins = meta["insider"]
-    assert ins["records"] == 4861
-    assert ins["by_source"] == {"BSE": 3349, "BSE+NSE": 1048, "NSE": 464}
-    assert ins["value_status"]["flagged"] == 104
-    assert ins["value_status"]["derivative"] == 33
-    assert meta["corporate_actions"]["records"] == 675
-    assert meta["preferential"]["records"] == 349
-    assert meta["preferential"]["amount_status"]["repaired"] == 32
+    assert ins["records"] > 0
+    assert set(ins["by_source"]) <= {"BSE", "BSE+NSE", "NSE"}
+    assert sum(ins["by_source"].values()) == ins["records"]
+    # Served window: a non-empty, size-bounded slice of the final records.
+    assert 0 < ins["served"]["records"] <= ins["records"]
+    assert sum(ins["served"]["by_source"].values()) == ins["served"]["records"]
+    assert sum(ins["value_status"].values()) == ins["served"]["records"]
+    assert meta["corporate_actions"]["records"] > 0
+    assert meta["preferential"]["records"] > 0
+    # Every raw value must be classified — an unmapped vocab value is a bug
+    # (extend the maps in pipeline/normalize.py, they must cover real data).
     assert not meta["warnings"], meta["warnings"]
-    # generated JSON exists
-    assert (ROOT / "docs/data/insider.json").exists()
+
+    served = json.loads((ROOT / "docs/data/insider.json").read_text("utf-8"))
+    assert len(served) == ins["served"]["records"]
+    assert set(served[0]) == set(ingest.SERVE_FIELDS)
+    # The served JSON must stay comfortably below GitHub's 100 MB file limit.
+    assert (ROOT / "docs/data/insider.json").stat().st_size < 50_000_000
     assert (ROOT / "docs/data/preferential.json").exists()
     assert (ROOT / "docs/data/meta.json").exists()

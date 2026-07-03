@@ -49,10 +49,16 @@ JSON and does all filtering/aggregation client-side.
    - BSE insider: <https://www.bseindia.com/corporates/insider_trading_new>
    - NSE insider: <https://www.nseindia.com/companies-listing/corporate-filings-insider-trading>
    - BSE corporate actions: <https://www.bseindia.com/corporates/corporate_act>
-2. Put them in the matching folder (filenames don't matter; all CSVs in a folder are read):
+2. Put them in the matching folder (filenames don't matter; all CSVs in a folder are read,
+   and overlapping date ranges are fine — duplicates collapse in the dedup step):
    - `data/raw/insider/bse/`
-   - `data/raw/insider/nse/`
+   - `data/raw/insider/nse/` — use the regular *Insider Trading* export; the "Annual PIT"
+     export is a coarser, incompatible format and the pipeline rejects it with an error.
    - `data/raw/corporate_actions/bse/`
+
+   However much history the raw files hold, the dashboard serves only the most recent
+   **18 months** (full-history BSE dumps reach 170k+ rows — too big to ship to a browser).
+   Change `SERVE_MONTHS` in `pipeline/ingest.py` to widen it.
 3. Run:
    ```bash
    ./update.sh          # add --fetch to also refresh preferential issues from the NSE API
@@ -131,6 +137,8 @@ This tab is scaffolded and wired to empty data. To populate it:
 data/raw/            raw exchange CSVs (the canonical inputs, committed)
 pipeline/            ingestion: normalize, parsers/, match, sanitize, aggregate, ingest
 tests/               stdlib test suite + runner
+  fixtures/          frozen copies of real exports the tests run against —
+                     refreshing data/raw/ never breaks the suite
 docs/                the static site GitHub Pages serves
   data/              generated JSON (committed)
   js/ css/ lib/      app modules, styles, vendored Chart.js
