@@ -20,6 +20,9 @@ if [ "${1:-}" = "--fetch" ]; then
   echo "▶ Fetching BSE insider trading"
   python3 pipeline/fetch_bse_insider.py
   echo
+  echo "▶ Fetching BSE corporate actions"
+  python3 pipeline/fetch_bse_corpactions.py
+  echo
 fi
 
 echo "▶ Ingesting raw CSVs → docs/data/*.json"
