@@ -1,0 +1,51 @@
+name: Daily data refresh
+
+on:
+  schedule:
+    # 18:30 IST, Mon–Fri (13:00 UTC). NSE closes 15:30 IST; this leaves a
+    # buffer for same-day filings to land. Runs fine on holidays/weekends
+    # too — it just finds no changes and exits cleanly.
+    - cron: '0 13 * * 1-5'
+  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab to test
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch NSE preferential issues
+        run: python3 pipeline/fetch_nse_pref.py
+        continue-on-error: true   # don't kill the job if NSE blocks/rate-limits this run
+
+      - name: Fetch NSE insider trading (trailing quarter)
+        run: python3 pipeline/fetch_nse_insider.py --days 90
+        continue-on-error: true
+
+      - name: Ingest raw CSVs → docs/data/*.json
+        run: python3 pipeline/ingest.py
+
+      - name: Run tests
+        run: python3 tests/run_tests.py
+
+      - name: Commit and push if data changed
+        run: |
+          git config user.name "catalyst-tracker-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git add -A
+          git commit -m "Auto data refresh $(date +%Y-%m-%d)"
+          git push
