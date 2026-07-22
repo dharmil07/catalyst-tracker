@@ -119,6 +119,11 @@
       <div class="filter-row">
         <label>From <input type="date" id="caFrom" /></label>
         <label>To <input type="date" id="caTo" /></label>
+        <div class="presets" id="caDatePresets">
+          <button data-days="182" class="active">6m</button>
+          <button data-days="365">1y</button>
+          <button data-days="0">All</button>
+        </div>
         <input type="search" id="caSearch" placeholder="Search company…" />
         <label class="switch"><input type="checkbox" id="caWatchOnly" /> Watchlist only</label>
         <button id="caReset" class="ghost">Reset</button>
