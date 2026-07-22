@@ -214,7 +214,6 @@ const COLS = [
   { key: "value", t: "Value", num: true },
   { key: "post_pct", t: "% Post", num: true },
   { key: "source", t: "Src" },
-  { key: "_doc", t: "Doc", sortable: false },
 ];
 const RENDER_CAP = 600;
 
@@ -275,7 +274,6 @@ function renderTable() {
       el("td", { class: "num" }, valueCell),
       el("td", { class: "num" }, fmtPct(r.post_pct)),
       el("td", {}, el("span", { class: "src", title: r.source }, r.source)),
-      el("td", {}, doc),
     ]);
     frag.append(tr);
   }
