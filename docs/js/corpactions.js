@@ -16,7 +16,7 @@ export function initCorp(params) {
   f.types = new Set((params.catypes || "").split(",").filter(Boolean));
   f.watchOnly = params.cawatch === "1";
 
-  if (!f.from && !f.to) { f.to = dataMax; f.from = daysAgoIso(182, dataMax); }
+  if (!f.from && !f.to) { f.to = dataMax; f.from = daysAgoIso(91, dataMax); }
 
   const types = [...new Set(state.corp.map((r) => r.category))].sort();
   buildChips("caTypeChips", types, f.types);
@@ -29,10 +29,10 @@ export function initCorp(params) {
   $("#caWatchOnly").addEventListener("change", (e) => { f.watchOnly = e.target.checked; render(); });
   $("#caReset").addEventListener("click", () => {
     f.search = ""; f.types.clear(); f.watchOnly = false;
-    f.to = dataMax; f.from = daysAgoIso(182, dataMax);
+    f.to = dataMax; f.from = daysAgoIso(91, dataMax);
     for (const c of document.querySelectorAll("#caTypeChips .chip.on")) c.classList.remove("on");
     $("#caFrom").value = f.from; $("#caTo").value = f.to; $("#caSearch").value = ""; $("#caWatchOnly").checked = false;
-    markCaPreset(document.querySelector('#caDatePresets button[data-days="182"]'));
+    markCaPreset(document.querySelector('#caDatePresets button[data-days="91"]'));
     render();
   });
   for (const b of document.querySelectorAll("#caDatePresets button")) {
