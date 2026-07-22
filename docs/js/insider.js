@@ -114,9 +114,9 @@ function syncControls() {
 function resetFilters() {
   f.types.clear(); f.cats.clear(); f.modes.clear();
   f.marketOnly = f.promoterOnly = f.watchOnly = false; f.search = "";
-  f.to = ""; f.from = "";
+  f.to = dataMax; f.from = daysAgoIso(30, dataMax);
   for (const c of document.querySelectorAll(".chip.on")) c.classList.remove("on");
-  markPreset(document.querySelector('#datePresets button[data-days="0"]'));
+  markPreset(document.querySelector('#datePresets button[data-days="90"]'));
   syncControls(); render();
 }
 function copyLink() {
