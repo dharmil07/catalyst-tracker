@@ -111,7 +111,7 @@ function renderCharts() {
 
   const top = filtered.filter((r) => r.issue_size)
     .sort((a, b) => b.issue_size - a.issue_size).slice(0, 12)
-    .map((r) => ({ label: r.company.length > 28 ? r.company.slice(0, 27) + "…" : r.company, value: r.issue_size }));
+    .map((r) => ({ label: r.company.length > 28 ? r.company.slice(0, 27) + "…" : r.company, fullName: r.company, value: r.issue_size }));
   charts.topBar("chartPfTop", top, "#b98bff");
 }
 
