@@ -29,10 +29,10 @@ export function initCorp(params) {
   $("#caWatchOnly").addEventListener("change", (e) => { f.watchOnly = e.target.checked; render(); });
   $("#caReset").addEventListener("click", () => {
     f.search = ""; f.types.clear(); f.watchOnly = false;
-    f.to = dataMax; f.from = daysAgoIso(91, dataMax);
+    f.to = ""; f.from = "";
     for (const c of document.querySelectorAll("#caTypeChips .chip.on")) c.classList.remove("on");
     $("#caFrom").value = f.from; $("#caTo").value = f.to; $("#caSearch").value = ""; $("#caWatchOnly").checked = false;
-    markCaPreset(document.querySelector('#caDatePresets button[data-days="91"]'));
+    markCaPreset(document.querySelector('#caDatePresets button[data-days="0"]'));
     render();
   });
   for (const b of document.querySelectorAll("#caDatePresets button")) {
