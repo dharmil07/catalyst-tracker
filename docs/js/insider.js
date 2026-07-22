@@ -18,6 +18,7 @@ const f = {
 };
 let dataMax = "", filtered = [];
 let isActive = false;
+let skipFirstPersist = true;
 
 export function initInsider(params) {
   // distinct categories / modes present in the data, for filter chips
@@ -57,6 +58,7 @@ function hydrate(p) {
 }
 function persist() {
   if (!isActive) return;
+  if (skipFirstPersist) { skipFirstPersist = false; return; }
   writeHash("insider", {
     from: f.from, to: f.to, types: [...f.types], cats: [...f.cats], modes: [...f.modes],
     market: f.marketOnly ? 1 : "", promoter: f.promoterOnly ? 1 : "", watch: f.watchOnly ? 1 : "",
