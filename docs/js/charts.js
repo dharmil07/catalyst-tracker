@@ -100,7 +100,10 @@ export function netBar(id, items, positive) {
   render(id, {
     type: "bar",
     data: { labels: items.map((i) => i.label), datasets: [{ data: items.map((i) => +(Math.abs(i.value) / 1e7).toFixed(2)), backgroundColor: positive ? C.buy : C.sell }] },
-    options: { indexAxis: "y", plugins: { legend: { display: false }, tooltip: { callbacks: { label: (c) => `${c.parsed.x} cr` } } }, scales: linScales() },
+    options: { indexAxis: "y", plugins: { legend: { display: false }, tooltip: { callbacks: {
+      title: (ctx) => items[ctx[0].dataIndex].fullName,
+      label: (c) => `${c.parsed.x} cr`,
+    } } }, scales: linScales() },
   });
 }
 
