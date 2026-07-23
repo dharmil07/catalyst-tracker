@@ -178,5 +178,5 @@ function exportCsv() {
     r.company, r.symbol, r.isin, r.date_allotment || "", r.date_listing || "",
     r.offer_price ?? "", r.shares_allotted ?? "", r.issue_size ?? "", r.amount_raised ?? "",
     r.amount_status, r.stage, r.xbrl || ""]);
-  downloadCsv("catalyst_tracker_preferential_issues.csv", rows);
+  downloadCsv("market_catalyst_preferential_issues.csv", rows);
 }
