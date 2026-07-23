@@ -292,7 +292,7 @@ function exportCsv() {
       label(r.txn_type), label(r.mode), r.shares ?? "", r.value_in_totals ? r.value : "",
       r.value_status, r.post_pct ?? "", r.source, r.regulation || "", r.xbrl || ""]);
   }
-  downloadCsv("catalyst_tracker_insider.csv", rows);
+  downloadCsv("market_catalyst_insider.csv", rows);
 }
 
 function debounce(fn, ms) {
